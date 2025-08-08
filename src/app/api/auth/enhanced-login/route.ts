@@ -54,7 +54,7 @@ function getUserType(phone: string) {
 
 export async function POST(request: NextRequest) {
   try {
-    const { phone, password } = await request.json();
+    const { phone } = await request.json();
 
     if (!phone) {
       return NextResponse.json({

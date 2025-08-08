@@ -8,7 +8,6 @@ import { useEffect } from 'react';
 
 export default function LoginPage() {
   const [contact, setContact] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
@@ -34,7 +33,7 @@ export default function LoginPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ phone: contact, password }),
+        body: JSON.stringify({ phone: contact }),
       });
 
       const data = await response.json();
@@ -89,7 +88,6 @@ export default function LoginPage() {
               <div className="text-xs text-blue-700 space-y-1">
                 <p><strong>Patient:</strong> Any phone number (e.g., 9042222856)</p>
                 <p><strong>Doctor:</strong> 987654321X (e.g., 9876543210)</p>
-                <p className="text-blue-600 italic">Password optional for demo</p>
               </div>
             </div>
           </div>
@@ -118,20 +116,6 @@ export default function LoginPage() {
                 required
               />
             </div>
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password <span className="text-gray-400 text-xs">(optional for demo)</span>
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password (optional)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm text-gray-900 placeholder-gray-400 bg-white"
-              />
-            </div>
 
             <div className="flex items-center justify-between">
               <div className="flex items-center">
@@ -145,12 +129,6 @@ export default function LoginPage() {
                   Remember Me
                 </label>
               </div>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-pink-500 hover:text-pink-600"
-              >
-                Forgot Password
-              </Link>
             </div>
 
             <button
