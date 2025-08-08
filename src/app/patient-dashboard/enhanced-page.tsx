@@ -88,14 +88,14 @@ export default function EnhancedPatientDashboard() {
       const appointmentsRes = await fetch(`/api/appointments?patientId=${patientId}`);
       if (appointmentsRes.ok) {
         const appointmentsData = await appointmentsRes.json();
-        setAppointments(appointmentsData.data || []);
+        setAppointments(Array.isArray(appointmentsData.data) ? appointmentsData.data : []);
       }
 
       // Load available doctors
       const doctorsRes = await fetch('/api/doctors');
       if (doctorsRes.ok) {
         const doctorsData = await doctorsRes.json();
-        setDoctors(doctorsData.data || []);
+        setDoctors(doctorsData.data?.doctors || []);
       }
     } catch (error) {
       console.error('Error loading dashboard data:', error);
@@ -115,17 +115,17 @@ export default function EnhancedPatientDashboard() {
     router.push('/login');
   };
 
-  const filteredDoctors = doctors.filter(doctor => {
+  const filteredDoctors = Array.isArray(doctors) ? doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          doctor.specialization.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesSpecialty = selectedSpecialty === '' || selectedSpecialty === 'All' || 
                             doctor.specialization === selectedSpecialty;
     return matchesSearch && matchesSpecialty;
-  });
+  }) : [];
 
-  const upcomingAppointments = appointments.filter(apt => 
+  const upcomingAppointments = Array.isArray(appointments) ? appointments.filter(apt => 
     apt.status === 'confirmed' || apt.status === 'pending'
-  ).slice(0, 3);
+  ).slice(0, 3) : [];
 
   if (loading) {
     return (

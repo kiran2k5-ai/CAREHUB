@@ -93,7 +93,14 @@ export async function POST(request: NextRequest) {
     } else {
       // Patient (any other phone number)
       userType = 'patient';
-      userData = { phone, name: 'Patient' };
+      // Generate a consistent ID based on phone number for patients
+      const patientId = `patient_${phone.replace(/[^0-9]/g, '')}`;
+      userData = { 
+        id: patientId,
+        phone, 
+        name: 'Patient',
+        email: `${phone}@demo.com` 
+      };
     }
 
     // Generate auth token

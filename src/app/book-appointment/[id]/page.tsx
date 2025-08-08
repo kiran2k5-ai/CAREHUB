@@ -65,6 +65,7 @@ export default function DoctorDetailPage() {
   const [availability, setAvailability] = useState<{ isAvailable: boolean; notes?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
+  const [patientData, setPatientData] = useState<any>(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     // Use utility function to get today's date without timezone issues
     const today = new Date();
@@ -88,6 +89,49 @@ export default function DoctorDetailPage() {
   };
 
   useEffect(() => {
+    // Initialize patient data
+    const initializeData = async () => {
+      const userType = localStorage.getItem('userType');
+      const userData = localStorage.getItem('userData');
+
+      if (userType !== 'patient' || !userData) {
+        console.log('No valid user session found, using fallback patient data');
+        // Fallback patient data for development/demo purposes
+        const fallbackPhone = '9042222856';
+        const fallbackPatient = {
+          id: `patient_${fallbackPhone}`,
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          phone: fallbackPhone
+        };
+        setPatientData(fallbackPatient);
+        return;
+      }
+
+      try {
+        const patient = JSON.parse(userData);
+        // Ensure patient has an ID
+        if (!patient.id && patient.phone) {
+          patient.id = `patient_${patient.phone.replace(/[^0-9]/g, '')}`;
+        }
+        console.log('Patient data loaded:', patient);
+        setPatientData(patient);
+      } catch (error) {
+        console.error('Error parsing user data:', error);
+        // Use fallback instead of redirecting
+        const fallbackPhone = '9042222856';
+        const fallbackPatient = {
+          id: `patient_${fallbackPhone}`,
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          phone: fallbackPhone
+        };
+        setPatientData(fallbackPatient);
+      }
+    };
+
+    initializeData();
+
     // Fetch doctor data from API
     const fetchDoctor = async () => {
       try {
@@ -131,7 +175,7 @@ export default function DoctorDetailPage() {
       setLoading(true);
       Promise.all([fetchDoctor(), fetchAvailability()]).finally(() => setLoading(false));
     }
-  }, [doctorId, selectedDate]);
+  }, [doctorId, selectedDate, router]);
 
   // Separate useEffect for time slots to allow independent loading
   useEffect(() => {
@@ -195,36 +239,94 @@ export default function DoctorDetailPage() {
   };
 
   const handleBookAppointment = async () => {
-    if (!selectedSlot) {
+    if (!selectedSlot || !doctor) {
       alert('Please select a time slot');
       return;
+    }
+
+    // Ensure patientData is available
+    let currentPatientData = patientData;
+    if (!currentPatientData || !currentPatientData.id) {
+      // Try to get from localStorage again
+      const userType = localStorage.getItem('userType');
+      const userData = localStorage.getItem('userData');
+      
+      if (userType === 'patient' && userData) {
+        try {
+          const parsedData = JSON.parse(userData);
+          // Ensure the parsed data has an ID
+          if (!parsedData.id && parsedData.phone) {
+            parsedData.id = `patient_${parsedData.phone.replace(/[^0-9]/g, '')}`;
+          }
+          currentPatientData = parsedData;
+          setPatientData(currentPatientData);
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+      
+      // If still no patient data, use fallback with proper ID
+      if (!currentPatientData || !currentPatientData.id) {
+        const fallbackPhone = '9042222856';
+        currentPatientData = {
+          id: `patient_${fallbackPhone}`,
+          name: 'Demo Patient',
+          email: 'patient@demo.com',
+          phone: fallbackPhone
+        };
+        setPatientData(currentPatientData);
+      }
     }
 
     try {
       setLoading(true);
       
-      // Prepare appointment data
+      const selectedSlotDetails = timeSlots.find(slot => slot.id === selectedSlot);
+      
+      if (!selectedSlotDetails) {
+        alert('Selected time slot not found. Please select again.');
+        return;
+      }
+      
+      // Prepare appointment data with proper validation
       const appointmentData = {
-        doctorId: doctor?.id,
-        patientId: 'user123', // In real app, get from authentication context
+        patientId: currentPatientData.id,
+        doctorId: doctor.id,
+        doctorName: doctor.name,
+        doctorSpecialization: doctor.specialization,
         date: getLocalDateString(selectedDate),
-        time: timeSlots.find(slot => slot.id === selectedSlot)?.time,
-        type: consultationType,
+        time: selectedSlotDetails.time,
+        consultationFee: consultationType === 'video' ? (doctor.consultationFee - 100) : doctor.consultationFee,
+        consultationType: consultationType,
+        reason: 'Regular consultation',
         notes: ''
       };
 
       console.log('Booking appointment with data:', appointmentData);
+      console.log('Patient ID being sent:', appointmentData.patientId);
 
-      // Use the localStorage-enabled booking function
-      const result = await bookAppointment(appointmentData);
+      // Call the API to book appointment
+      const response = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(appointmentData),
+      });
 
-      if (result.success) {
+      const result = await response.json();
+      console.log('Booking response status:', response.status);
+      console.log('Booking response:', result);
+
+      if (response.ok && result.success) {
         // Show success message and redirect
         alert('Appointment booked successfully!');
         router.push('/patient-dashboard/appointments');
       } else {
-        // Handle error
-        alert(result.error || 'Failed to book appointment');
+        // Handle error with more details
+        const errorMessage = result.message || result.error || 'Failed to book appointment';
+        console.error('Booking failed:', result);
+        alert(errorMessage);
       }
     } catch (error) {
       console.error('Error booking appointment:', error);
