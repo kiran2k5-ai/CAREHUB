@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { isAuthenticated, getAuthData } from '@/lib/authUtils';
 import {
   MagnifyingGlassIcon,
   HeartIcon,
@@ -54,11 +55,17 @@ export default function BookAppointmentPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    } else {
+    // Use robust authentication check
+    if (!isAuthenticated('patient')) {
+      console.log('Patient authentication failed, redirecting to login');
       router.push('/login');
+      return;
+    }
+
+    const authData = getAuthData();
+    if (authData) {
+      setUser(authData.userData);
+      console.log('User authenticated for booking:', authData.userData);
     }
 
     const savedFavorites = localStorage.getItem('doctorFavorites');
