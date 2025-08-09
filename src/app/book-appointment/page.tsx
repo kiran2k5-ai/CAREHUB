@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { isAuthenticated, getAuthData } from '@/lib/authUtils';
+import AuthGuard from '@/components/AuthGuard';
 import {
   MagnifyingGlassIcon,
   HeartIcon,
@@ -55,13 +56,7 @@ export default function BookAppointmentPage() {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    // Use robust authentication check
-    if (!isAuthenticated('patient')) {
-      console.log('Patient authentication failed, redirecting to login');
-      router.push('/login');
-      return;
-    }
-
+    // Auth is now handled by AuthGuard, just get the auth data
     const authData = getAuthData();
     if (authData) {
       setUser(authData.userData);
@@ -210,10 +205,11 @@ export default function BookAppointmentPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="px-4 py-4">
+    <AuthGuard requiredUserType="patient">
+      <div className="min-h-screen bg-gray-50">
+        {/* Header */}
+        <div className="bg-white shadow-sm border-b">
+          <div className="px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <button
@@ -403,5 +399,6 @@ export default function BookAppointmentPage() {
         )}
       </div>
     </div>
+    </AuthGuard>
   );
 }

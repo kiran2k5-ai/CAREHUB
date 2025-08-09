@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signIn, useSession } from 'next-auth/react';
 import { useEffect } from 'react';
+import { setAuthData } from '@/lib/authUtils';
 
 export default function LoginPage() {
   const [contact, setContact] = useState('');
@@ -42,10 +43,12 @@ export default function LoginPage() {
         throw new Error(data.error || 'Login failed');
       }
 
-      // Save auth data and redirect
-      localStorage.setItem('authToken', data.authToken);
-      localStorage.setItem('userType', data.userType);
-      localStorage.setItem('userData', JSON.stringify(data.userData));
+      // Save auth data using the robust utility function
+      setAuthData(data.userData, data.userType, data.authToken);
+      
+      // Small delay to ensure localStorage is written
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       router.push(data.redirectUrl);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
