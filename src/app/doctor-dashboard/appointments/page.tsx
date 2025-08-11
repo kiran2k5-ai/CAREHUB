@@ -16,6 +16,7 @@ import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import { useRef } from 'react';
 import { parseISO } from 'date-fns';
+import Link from 'next/link';
 
 interface Appointment {
   id: string;
@@ -286,6 +287,19 @@ export default function DoctorAppointments() {
                 return a.date < today || a.status !== 'scheduled';
               }).length})
             </button>
+              <div className="w-full flex flex-wrap gap-4 items-center justify-end mb-6">
+                <Link href="/doctor-dashboard/calendar_view">
+                  <button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition duration-300 ease-in-out">
+                    📅 Open Full Calendar View
+                  </button>
+                </Link>
+
+                <Link href="/doctor-dashboard/medical-history/123">
+                  <button className="bg-white text-blue-600 font-semibold border border-blue-500 hover:bg-blue-50 py-2 px-6 rounded-xl shadow-sm transition duration-300 ease-in-out">
+                    🩺 View Medical History
+                  </button>
+                </Link>
+              </div>
           </div>
         </div>
       </div>
