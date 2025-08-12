@@ -1,0 +1,42 @@
+/* calendarStyles.css */
+
+/* Force FullCalendar text color to black for content */
+.fc {
+  color: #000 !important;
+}
+
+/* Optional: Make event title and date text black */
+.fc .fc-event-title,
+.fc .fc-daygrid-day-number,
+.fc-toolbar-title {
+  color: #000 !important;
+}
+
+/* Update header buttons to match the Appointments icon color */
+.fc-button {
+  color: #00A7D0 !important;         /* Text/icon color */
+  background-color: #E6F9FF !important; /* Optional: light blue bg */
+  border-color: #00A7D0 !important;  /* Optional: matching border */
+}
+
+/* On hover/focus/active, make buttons more vibrant */
+.fc-button:hover,
+.fc-button:focus,
+.fc-button:active {
+  background-color: #00A7D0 !important;
+  color: #fff !important;
+  border-color: #007B9E !important; /* Slightly darker for contrast */
+}
+
+/* Optional tooltip fade animation */
+.fc-tooltip {
+  position: absolute;
+  background-color: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  z-index: 1000;
+  white-space: nowrap;
+}
+

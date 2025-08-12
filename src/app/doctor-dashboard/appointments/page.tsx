@@ -162,70 +162,7 @@ export default function DoctorAppointments() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Calendar Button and Modal */}
-      <div className="px-4 pt-6">
-        <button
-          className="bg-cyan-500 hover:bg-cyan-600 text-white font-medium py-2 px-4 rounded-lg shadow mb-4"
-          onClick={() => setShowCalendar(true)}
-        >
-          Show Calendar
-        </button>
-        {showCalendar && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-            <div className="bg-white rounded-lg shadow-lg p-6 relative w-full max-w-md mx-auto">
-              <button
-                className="absolute top-2 right-2 text-gray-400 hover:text-gray-700 text-2xl font-bold"
-                onClick={() => setShowCalendar(false)}
-                aria-label="Close Calendar"
-              >
-                ×
-              </button>
-              <style>{`
-                .react-calendar__tile {
-                  color: #111 !important;
-                  font-weight: 500;
-                }
-                .react-calendar__month-view__days__day--neighboringMonth {
-                  color: #d1d5db !important;
-                }
-                .react-calendar__tile--active,
-                .react-calendar__tile--now.react-calendar__tile--active {
-                  background: #22d3ee !important;
-                  color: #111 !important;
-                  border-radius: 0.5rem !important;
-                  box-shadow: 0 0 0 2px #06b6d4;
-                }
-                .react-calendar__tile--active:focus {
-                  outline: 2px solid #06b6d4;
-                }
-                .react-calendar__month-view__weekdays__weekday,
-                .react-calendar__navigation__label,
-                .react-calendar__navigation button {
-                  color: #111 !important;
-                  font-weight: 600;
-                }
-              `}</style>
-              <Calendar
-                onChange={date => {
-                  setSelectedDate(date as Date);
-                }}
-                value={selectedDate}
-                tileContent={tileContent}
-                calendarType="iso8601"
-                className="rounded-lg shadow border border-gray-200 w-full"
-              />
-              {selectedDate && (
-                <button
-                  className="mt-4 text-cyan-500 underline text-sm"
-                  onClick={() => setSelectedDate(null)}
-                >
-                  Clear Date Filter
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
+      
       {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="px-4 py-4">
@@ -287,20 +224,24 @@ export default function DoctorAppointments() {
                 return a.date < today || a.status !== 'scheduled';
               }).length})
             </button>
-              <div className="w-full flex flex-wrap gap-4 items-center justify-end mb-6">
-                <Link href="/doctor-dashboard/calendar_view">
-                  <button className="bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2 px-6 rounded-xl shadow-md transition duration-300 ease-in-out">
-                    📅 Open Full Calendar View
-                  </button>
-                </Link>
-
-                <Link href="/doctor-dashboard/medical-history/123">
-                  <button className="bg-white text-blue-600 font-semibold border border-blue-500 hover:bg-blue-50 py-2 px-6 rounded-xl shadow-sm transition duration-300 ease-in-out">
-                    🩺 View Medical History
-                  </button>
-                </Link>
-              </div>
           </div>
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="bg-white border-b px-4 py-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+          <Link href="/doctor-dashboard/calendar_view" className="flex-1 sm:flex-none">
+            <button className="w-full bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold py-2.5 px-4 sm:px-6 rounded-lg shadow-md transition duration-300 ease-in-out text-sm sm:text-base">
+              📅 Full Calendar View
+            </button>
+          </Link>
+
+          <Link href="/medical-history" className="flex-1 sm:flex-none">
+            <button className="w-full bg-white text-blue-600 font-semibold border border-blue-500 hover:bg-blue-50 py-2.5 px-4 sm:px-6 rounded-lg shadow-sm transition duration-300 ease-in-out text-sm sm:text-base">
+              🩺 Medical History
+            </button>
+          </Link>
         </div>
       </div>
 
