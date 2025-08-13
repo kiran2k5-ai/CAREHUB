@@ -38,10 +38,10 @@ export default function PatientList() {
       {/* Bottom Navigation */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow z-50">
         <div className="flex justify-around items-center py-2">
-          <NavItem href="/" icon={<Home size={20} />} label="Home" active={pathname === "/"} />
-          <NavItem href="/appointments" icon={<CalendarDays size={20} />} label="Appointments" active={pathname === "/appointments"} />
-          <NavItem href="/notifications" icon={<Bell size={20} />} label="Notifications" active={pathname === "/notifications"} badgeCount={2} />
-          <NavItem href="/profile" icon={<User size={20} />} label="Profile" active={pathname === "/profile"} />
+          <NavItem href="/doctor-dashboard" icon={<Home size={20} />} label="Home" active={pathname === "/doctor-dashboard"} />
+          <NavItem href="/doctor-dashboard/appointments" icon={<CalendarDays size={20} />} label="Appointments" active={pathname === "/doctor-dashboard/appointments"} />
+          <NavItem href="/doctor-dashboard/notifications" icon={<Bell size={20} />} label="Notifications" active={pathname === "/doctor-dashboard/notifications"} badgeCount={2} />
+          <NavItem href="/doctor-dashboard/profile" icon={<User size={20} />} label="Profile" active={pathname === "/doctor-dashboard/profile"} />
         </div>
       </footer>
     </div>
