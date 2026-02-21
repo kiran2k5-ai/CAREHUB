@@ -1,0 +1,198 @@
+/* calendarStyles.css */
+
+/* Force FullCalendar text color to black for content */
+.fc {
+  color: #000 !important;
+}
+
+/* Optional: Make event title and date text black */
+.fc .fc-event-title,
+.fc .fc-daygrid-day-number,
+.fc-toolbar-title {
+  color: #000 !important;
+}
+
+/* Update header buttons to match the Appointments icon color */
+.fc-button {
+  color: #00A7D0 !important;         /* Text/icon color */
+  background-color: #E6F9FF !important; /* Optional: light blue bg */
+  border-color: #00A7D0 !important;  /* Optional: matching border */
+}
+
+/* On hover/focus/active, make buttons more vibrant */
+.fc-button:hover,
+.fc-button:focus,
+.fc-button:active {
+  background-color: #00A7D0 !important;
+  color: #fff !important;
+  border-color: #007B9E !important; /* Slightly darker for contrast */
+}
+
+/* Mobile-First Responsive Design for FullCalendar */
+@media (max-width: 767px) {
+  /* Make calendar more compact on mobile */
+  .fc {
+    font-size: 12px !important;
+  }
+  
+  .fc-toolbar {
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 8px !important;
+  }
+  
+  .fc-toolbar-chunk {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 16px !important;
+    margin: 0 !important;
+  }
+  
+  .fc-button {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+    min-height: 32px !important;
+  }
+  
+  .fc-button-group {
+    display: flex !important;
+    gap: 4px !important;
+  }
+  
+  /* Make day cells smaller on mobile */
+  .fc-daygrid-day {
+    min-height: 40px !important;
+  }
+  
+  .fc-daygrid-day-number {
+    font-size: 12px !important;
+    padding: 2px !important;
+  }
+  
+  /* Adjust event sizing for mobile */
+  .fc-event {
+    font-size: 10px !important;
+    padding: 1px 3px !important;
+    margin: 1px 0 !important;
+  }
+  
+  .fc-event-title {
+    font-size: 10px !important;
+    line-height: 1.2 !important;
+  }
+  
+  /* Make header more compact */
+  .fc-col-header-cell {
+    padding: 4px 2px !important;
+  }
+  
+  .fc-col-header-cell-cushion {
+    font-size: 11px !important;
+    padding: 2px !important;
+  }
+  
+  /* Adjust day grid for mobile */
+  .fc-daygrid-day-frame {
+    min-height: 40px !important;
+  }
+  
+  /* More link styling for mobile */
+  .fc-more-link {
+    font-size: 10px !important;
+    padding: 1px 3px !important;
+  }
+}
+
+/* Tablet responsive adjustments */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .fc {
+    font-size: 13px !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 18px !important;
+  }
+  
+  .fc-button {
+    padding: 6px 12px !important;
+    font-size: 13px !important;
+  }
+  
+  .fc-daygrid-day {
+    min-height: 50px !important;
+  }
+}
+
+/* Desktop and larger screens */
+@media (min-width: 1024px) {
+  .fc {
+    font-size: 14px !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 20px !important;
+  }
+  
+  .fc-daygrid-day {
+    min-height: 60px !important;
+  }
+}
+
+/* Ensure calendar is horizontally scrollable on very small screens */
+@media (max-width: 480px) {
+  .fc-view-harness {
+    overflow-x: auto !important;
+  }
+  
+  .fc-daygrid-body {
+    min-width: 320px !important;
+  }
+  
+  /* Even smaller text for very small screens */
+  .fc {
+    font-size: 11px !important;
+  }
+  
+  .fc-event {
+    font-size: 9px !important;
+  }
+  
+  .fc-toolbar-title {
+    font-size: 14px !important;
+  }
+  
+  .fc-button {
+    padding: 3px 6px !important;
+    font-size: 11px !important;
+    min-height: 28px !important;
+  }
+}
+
+/* Optional tooltip fade animation */
+.fc-tooltip {
+  position: absolute;
+  background-color: #333;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  z-index: 1000;
+  white-space: nowrap;
+}
+
+/* Fix for mobile touch interactions */
+@media (hover: none) and (pointer: coarse) {
+  .fc-event {
+    cursor: pointer !important;
+  }
+  
+  .fc-button:hover {
+    background-color: #00A7D0 !important;
+    color: #fff !important;
+  }
+}
+

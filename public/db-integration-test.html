@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Integration Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+        .test-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    </style>
+</head>
+<body>
+    <h1>🚀 Database Integration Verification</h1>
+    <p>Testing all API endpoints to ensure Supabase database integration is working correctly.</p>
+    
+    <button onclick="runAllTests()">🔄 Run All Tests</button>
+    <button onclick="clearResults()">🗑️ Clear Results</button>
+    
+    <div id="results" class="test-grid"></div>
+
+    <script>
+        const testPatient = {
+            phone: '9042222856',
+            id: 'a1b2c3d4-e5f6-4321-9876-12345678901a'
+        };
+
+        const testDoctor = {
+            phone: '9876543210', 
+            id: 'f1e2d3c4-b5a6-7890-1234-567890abcdef'
+        };
+
+        async function testEndpoint(name, url, options = {}) {
+            const resultDiv = document.getElementById(`test-${name.replace(/\s+/g, '-').toLowerCase()}`);
+            if (resultDiv) {
+                resultDiv.className = 'test-section loading';
+                resultDiv.innerHTML = `<h3>🔄 ${name}</h3><p>Testing...</p>`;
+            }
+
+            try {
+                const response = await fetch(url, {
+                    headers: { 'Content-Type': 'application/json' },
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (resultDiv) {
+                    resultDiv.className = response.ok ? 'test-section success' : 'test-section error';
+                    resultDiv.innerHTML = `
+                        <h3>${response.ok ? '✅' : '❌'} ${name}</h3>
+                        <p><strong>Status:</strong> ${response.status}</p>
+                        <p><strong>URL:</strong> ${url}</p>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+                
+                return { success: response.ok, data, status: response.status };
+            } catch (error) {
+                if (resultDiv) {
+                    resultDiv.className = 'test-section error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ ${name}</h3>
+                        <p><strong>Error:</strong> ${error.message}</p>
+                        <p><strong>URL:</strong> ${url}</p>
+                    `;
+                }
+                return { success: false, error: error.message };
+            }
+        }
+
+        async function runAllTests() {
+            const tests = [
+                { name: 'Get All Appointments', url: '/api/appointments' },
+                { name: 'Get Patient Appointments', url: `/api/appointments?patientId=${testPatient.id}` },
+                { name: 'Get Doctor Appointments', url: `/api/appointments?doctorId=${testDoctor.id}` },
+                { name: 'Get Calendar Format', url: `/api/appointments?doctorId=${testDoctor.id}&format=calendar` },
+                { name: 'Get All Doctors', url: '/api/doctors' },
+                { name: 'Get Specific Doctor', url: `/api/doctors/${testDoctor.id}` },
+                { name: 'Get Specialties', url: '/api/specialties' },
+                { 
+                    name: 'Create Appointment', 
+                    url: '/api/appointments',
+                    options: {
+                        method: 'POST',
+                        body: JSON.stringify({
+                            patientId: testPatient.id,
+                            doctorId: testDoctor.id,
+                            appointmentDate: '2024-12-26',
+                            appointmentTime: '11:00',
+                            reason: 'Browser Integration Test',
+                            status: 'scheduled'
+                        })
+                    }
+                }
+            ];
+
+            // Create result containers
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = tests.map(test => 
+                `<div id="test-${test.name.replace(/\s+/g, '-').toLowerCase()}" class="test-section loading">
+                    <h3>🔄 ${test.name}</h3>
+                    <p>Waiting...</p>
+                </div>`
+            ).join('');
+
+            // Run tests sequentially
+            for (const test of tests) {
+                await testEndpoint(test.name, test.url, test.options);
+                await new Promise(resolve => setTimeout(resolve, 500)); // Small delay between tests
+            }
+
+            console.log('🎯 All database integration tests completed!');
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+
+        // Auto-run tests on page load
+        window.onload = () => {
+            setTimeout(runAllTests, 1000); // Wait 1 second for server to be ready
+        };
+    </script>
+</body>
+</html>

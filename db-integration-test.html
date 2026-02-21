@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Integration Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .warning { background-color: #fff3cd; border-color: #ffeaa7; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background-color: #0056b3; }
+        .log { 
+            background: #f8f9fa; 
+            border: 1px solid #dee2e6; 
+            padding: 10px; 
+            border-radius: 4px; 
+            font-family: monospace; 
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🗄️ Supabase Database Integration Test</h1>
+    <p>Testing the complete database integration replacing all mock APIs.</p>
+
+    <div class="container">
+        <h2>📊 Database Tests</h2>
+        
+        <div id="test1" class="test-section info">
+            <h3>Test 1: Doctors API from Database</h3>
+            <button onclick="testDoctors()">🏥 Test Doctors</button>
+            <div id="doctors-log" class="log"></div>
+        </div>
+
+        <div id="test2" class="test-section info">
+            <h3>Test 2: Patient Appointments (9042222856)</h3>
+            <button onclick="testPatientAppointments()">👤 Test Patient</button>
+            <div id="patient-log" class="log"></div>
+        </div>
+
+        <div id="test3" class="test-section info">
+            <h3>Test 3: Doctor Appointments (9876543210)</h3>
+            <button onclick="testDoctorAppointments()">👨‍⚕️ Test Doctor</button>
+            <div id="doctor-log" class="log"></div>
+        </div>
+
+        <div id="test4" class="test-section info">
+            <h3>Test 4: Book Appointment to Database</h3>
+            <button onclick="testBookAppointment()">📝 Test Booking</button>
+            <div id="booking-log" class="log"></div>
+        </div>
+
+        <div id="test5" class="test-section info">
+            <h3>Test 5: Complete Workflow Test</h3>
+            <button onclick="testCompleteWorkflow()">🔄 Full Test</button>
+            <div id="workflow-log" class="log"></div>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Summary</h2>
+        <div id="summary" class="test-section">
+            <p>Run tests above to see results...</p>
+        </div>
+    </div>
+
+    <script>
+        let testResults = {};
+
+        function updateSummary() {
+            const passed = Object.values(testResults).filter(r => r === true).length;
+            const failed = Object.values(testResults).filter(r => r === false).length;
+            const total = Object.keys(testResults).length;
+
+            document.getElementById('summary').innerHTML = `
+                <h3>📊 Database Integration Results</h3>
+                <p><strong>✅ Passed:</strong> ${passed}/${total}</p>
+                <p><strong>❌ Failed:</strong> ${failed}/${total}</p>
+                <p><strong>Success Rate:</strong> ${total > 0 ? Math.round((passed/total)*100) : 0}%</p>
+                ${total > 0 ? '<h4>Details:</h4>' + Object.entries(testResults).map(([test, result]) => 
+                    `<p><strong>${test}:</strong> ${result ? '✅' : '❌'}</p>`
+                ).join('') : ''}
+            `;
+        }
+
+        async function testDoctors() {
+            const logEl = document.getElementById('doctors-log');
+            const testEl = document.getElementById('test1');
+            
+            logEl.textContent = '🔄 Testing doctors from Supabase database...\n';
+            
+            try {
+                const response = await fetch('/api/doctors');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const doctors = data.data?.doctors || data.data || [];
+                    logEl.textContent += `✅ Success: ${doctors.length} doctors from database\n`;
+                    logEl.textContent += `📊 Sample doctor: ${JSON.stringify(doctors[0], null, 2)}\n`;
+                    testEl.className = 'test-section success';
+                    testResults['doctors'] = true;
+                } else {
+                    throw new Error(data.error || 'Invalid response');
+                }
+            } catch (error) {
+                logEl.textContent += `❌ Error: ${error.message}\n`;
+                testEl.className = 'test-section error';
+                testResults['doctors'] = false;
+            }
+            
+            updateSummary();
+        }
+
+        async function testPatientAppointments() {
+            const logEl = document.getElementById('patient-log');
+            const testEl = document.getElementById('test2');
+            
+            logEl.textContent = '🔄 Testing patient appointments from database...\n';
+            
+            try {
+                const response = await fetch('/api/appointments?userId=9042222856&userType=PATIENT');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    logEl.textContent += `✅ Success: ${data.data.length} appointments from database\n`;
+                    logEl.textContent += `📊 Data: ${JSON.stringify(data.data, null, 2)}\n`;
+                    testEl.className = 'test-section success';
+                    testResults['patient'] = true;
+                } else {
+                    throw new Error(data.error || 'Invalid response');
+                }
+            } catch (error) {
+                logEl.textContent += `❌ Error: ${error.message}\n`;
+                testEl.className = 'test-section error';
+                testResults['patient'] = false;
+            }
+            
+            updateSummary();
+        }
+
+        async function testDoctorAppointments() {
+            const logEl = document.getElementById('doctor-log');
+            const testEl = document.getElementById('test3');
+            
+            logEl.textContent = '🔄 Testing doctor appointments from database...\n';
+            
+            try {
+                const response = await fetch('/api/appointments?userId=9876543210&userType=DOCTOR');
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    logEl.textContent += `✅ Success: ${data.data.length} appointments from database\n`;
+                    logEl.textContent += `📊 Data: ${JSON.stringify(data.data, null, 2)}\n`;
+                    testEl.className = 'test-section success';
+                    testResults['doctor'] = true;
+                } else {
+                    throw new Error(data.error || 'Invalid response');
+                }
+            } catch (error) {
+                logEl.textContent += `❌ Error: ${error.message}\n`;
+                testEl.className = 'test-section error';
+                testResults['doctor'] = false;
+            }
+            
+            updateSummary();
+        }
+
+        async function testBookAppointment() {
+            const logEl = document.getElementById('booking-log');
+            const testEl = document.getElementById('test4');
+            
+            logEl.textContent = '🔄 Testing appointment booking to database...\n';
+            
+            const appointmentData = {
+                patientId: '9042222856',
+                doctorId: '9876543210',
+                date: '2025-10-16',
+                time: '10:30',
+                reason: 'Database Integration Test',
+                consultationType: 'IN_PERSON',
+                consultationFee: 500
+            };
+            
+            try {
+                const response = await fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appointmentData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    logEl.textContent += `✅ Success: Appointment saved to database\n`;
+                    logEl.textContent += `🆔 ID: ${data.data.id || data.appointment.id}\n`;
+                    logEl.textContent += `📊 Data: ${JSON.stringify(data, null, 2)}\n`;
+                    testEl.className = 'test-section success';
+                    testResults['booking'] = true;
+                } else {
+                    throw new Error(data.error || 'Booking failed');
+                }
+            } catch (error) {
+                logEl.textContent += `❌ Error: ${error.message}\n`;
+                testEl.className = 'test-section error';
+                testResults['booking'] = false;
+            }
+            
+            updateSummary();
+        }
+
+        async function testCompleteWorkflow() {
+            const logEl = document.getElementById('workflow-log');
+            const testEl = document.getElementById('test5');
+            
+            logEl.textContent = '🔄 Testing complete workflow...\n';
+            
+            try {
+                // Step 1: Book appointment
+                logEl.textContent += '1️⃣ Booking new appointment...\n';
+                const bookingData = {
+                    patientId: '9042222856',
+                    doctorId: '9876543210',
+                    date: '2025-10-17',
+                    time: '15:00',
+                    reason: 'Complete Workflow Test',
+                    consultationType: 'IN_PERSON',
+                    consultationFee: 500
+                };
+                
+                const bookResponse = await fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(bookingData)
+                });
+                
+                const bookData = await bookResponse.json();
+                if (!bookResponse.ok || !bookData.success) {
+                    throw new Error('Booking failed: ' + (bookData.error || 'Unknown error'));
+                }
+                
+                const appointmentId = bookData.data?.id || bookData.appointment?.id;
+                logEl.textContent += `✅ Appointment booked: ${appointmentId}\n`;
+                
+                // Step 2: Verify in patient dashboard
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                logEl.textContent += '2️⃣ Checking patient dashboard...\n';
+                
+                const patientResponse = await fetch('/api/appointments?userId=9042222856&userType=PATIENT');
+                const patientData = await patientResponse.json();
+                
+                if (!patientResponse.ok || !patientData.success) {
+                    throw new Error('Patient check failed');
+                }
+                
+                const foundInPatient = patientData.data.some(apt => 
+                    apt.id === appointmentId || apt.reason === 'Complete Workflow Test'
+                );
+                
+                if (foundInPatient) {
+                    logEl.textContent += `✅ Found in patient dashboard\n`;
+                } else {
+                    throw new Error('Not found in patient dashboard');
+                }
+                
+                // Step 3: Verify in doctor dashboard
+                logEl.textContent += '3️⃣ Checking doctor dashboard...\n';
+                
+                const doctorResponse = await fetch('/api/appointments?userId=9876543210&userType=DOCTOR');
+                const doctorData = await doctorResponse.json();
+                
+                if (!doctorResponse.ok || !doctorData.success) {
+                    throw new Error('Doctor check failed');
+                }
+                
+                const foundInDoctor = doctorData.data.some(apt => 
+                    apt.id === appointmentId || apt.reason === 'Complete Workflow Test'
+                );
+                
+                if (foundInDoctor) {
+                    logEl.textContent += `✅ Found in doctor dashboard\n`;
+                } else {
+                    throw new Error('Not found in doctor dashboard');
+                }
+                
+                // Success!
+                logEl.textContent += `\n🎉 COMPLETE WORKFLOW: SUCCESS!\n`;
+                logEl.textContent += `✅ Dynamic booking working with database\n`;
+                logEl.textContent += `✅ Real-time updates working\n`;
+                testEl.className = 'test-section success';
+                testResults['workflow'] = true;
+                
+            } catch (error) {
+                logEl.textContent += `❌ Workflow failed: ${error.message}\n`;
+                testEl.className = 'test-section error';
+                testResults['workflow'] = false;
+            }
+            
+            updateSummary();
+        }
+
+        // Auto-run all tests
+        window.addEventListener('load', async () => {
+            console.log('🚀 Starting database integration tests...');
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testDoctors();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testPatientAppointments();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testDoctorAppointments();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testBookAppointment();
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await testCompleteWorkflow();
+            
+            console.log('✅ Database integration tests completed');
+        });
+    </script>
+</body>
+</html>

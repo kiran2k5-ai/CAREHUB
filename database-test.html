@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-button {
+            background: #22D3EE;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        .test-button:hover {
+            background: #0EA5E9;
+        }
+        .result {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background: #D1FAE5;
+            border: 1px solid #10B981;
+            color: #065F46;
+        }
+        .error {
+            background: #FEE2E2;
+            border: 1px solid #EF4444;
+            color: #991B1B;
+        }
+        .info {
+            background: #DBEAFE;
+            border: 1px solid #3B82F6;
+            color: #1E40AF;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CareHub Database Test</h1>
+        <p>This page helps you test your database connection and deployment.</p>
+        
+        <div>
+            <button class="test-button" onclick="testDatabaseConnection()">🔍 Test Database Connection</button>
+            <button class="test-button" onclick="createTestAppointment()">📅 Create Test Appointment</button>
+            <button class="test-button" onclick="fetchDoctorAppointments()">👨‍⚕️ Fetch Doctor Appointments</button>
+            <button class="test-button" onclick="fetchPatientAppointments()">👤 Fetch Patient Appointments</button>
+            <button class="test-button" onclick="runAllTests()">🎯 Run All Tests</button>
+        </div>
+
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const resultsDiv = document.getElementById('results');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.textContent = message;
+            resultsDiv.appendChild(div);
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+
+        function clearResults() {
+            resultsDiv.innerHTML = '';
+        }
+
+        async function testDatabaseConnection() {
+            addResult('🔍 Testing database connection...', 'info');
+            
+            try {
+                const response = await fetch('/api/db-test', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Database connection successful!
+📊 User count: ${data.data.userCount}
+⏰ Timestamp: ${data.data.timestamp}`, 'success');
+                } else {
+                    const errorData = await response.json();
+                    addResult(`❌ Database connection failed
+Error: ${errorData.message}
+${errorData.error || ''}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Error testing database: ${error.message}`, 'error');
+            }
+        }
+
+        async function createTestAppointment() {
+            const appointmentData = {
+                patientId: 'patient_9042222856',
+                doctorId: 'doctor_9876543210',
+                date: new Date().toISOString().split('T')[0], // Today
+                time: '15:00',
+                consultationType: 'IN_PERSON',
+                consultationFee: 500,
+                reason: 'Database test appointment'
+            };
+
+            addResult('🔄 Creating test appointment...', 'info');
+
+            try {
+                const response = await fetch('/api/appointments', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appointmentData)
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Test appointment created successfully!
+📅 Appointment ID: ${data.id}
+👨‍⚕️ Doctor: ${data.doctorName}
+👤 Patient: ${data.patientName}
+📍 Date: ${data.date} at ${data.time}`, 'success');
+                } else {
+                    const errorData = await response.text();
+                    addResult(`❌ Failed to create appointment
+Response: ${errorData}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Error creating appointment: ${error.message}`, 'error');
+            }
+        }
+
+        async function fetchDoctorAppointments(doctorId = 'doctor_9876543210') {
+            addResult(`🔄 Fetching appointments for doctor: ${doctorId}`, 'info');
+
+            try {
+                const response = await fetch(`/api/doctor/appointments?doctorId=${doctorId}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Doctor appointments fetched successfully!
+📊 Found ${data.total} appointments
+📅 Appointments: ${JSON.stringify(data.data, null, 2)}`, 'success');
+                } else {
+                    const errorData = await response.text();
+                    addResult(`❌ Failed to fetch appointments
+Response: ${errorData}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Error fetching appointments: ${error.message}`, 'error');
+            }
+        }
+
+        async function fetchPatientAppointments(patientId = 'patient_9042222856') {
+            addResult(`🔄 Fetching appointments for patient: ${patientId}`, 'info');
+
+            try {
+                const response = await fetch(`/api/appointments?patientId=${patientId}`, {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    addResult(`✅ Patient appointments fetched successfully!
+📊 Found ${data.data.length} appointments
+📅 Appointments: ${JSON.stringify(data.data, null, 2)}`, 'success');
+                } else {
+                    const errorData = await response.text();
+                    addResult(`❌ Failed to fetch patient appointments
+Response: ${errorData}`, 'error');
+                }
+            } catch (error) {
+                addResult(`❌ Error fetching patient appointments: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            clearResults();
+            addResult('🚀 Starting Database Tests...', 'info');
+            addResult('==============================', 'info');
+
+            await testDatabaseConnection();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            await createTestAppointment();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            await fetchDoctorAppointments();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            await fetchPatientAppointments();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+
+            addResult('✅ All tests completed!', 'success');
+        }
+
+        // Auto-run connection test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testDatabaseConnection, 1000);
+        });
+    </script>
+</body>
+</html>

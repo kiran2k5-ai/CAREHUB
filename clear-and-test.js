@@ -1,0 +1,1 @@
+"console.log('Current localStorage:'); console.log('userType:', localStorage.getItem('userType')); console.log('userData:', localStorage.getItem('userData')); localStorage.clear(); console.log('? Storage cleared - login again to test real UUIDs');"  

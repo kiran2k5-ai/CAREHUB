@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CareHub Booking System Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { border-color: #4CAF50; background: #f8fff8; }
+        .error { border-color: #f44336; background: #fff8f8; }
+        .loading { border-color: #2196F3; background: #f8f9ff; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto; font-size: 12px; }
+        .status { font-weight: bold; margin: 10px 0; }
+        .results { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 CareHub Dynamic Booking System Test</h1>
+        <p>Testing Patient 9042222856 → Doctor 9876543210 booking flow</p>
+        
+        <div class="test-section loading" id="test1">
+            <h3>📝 Test 1: Create Appointment</h3>
+            <button onclick="testCreateAppointment()">Run Test</button>
+            <div class="status" id="status1">Ready to test</div>
+            <pre id="result1"></pre>
+        </div>
+        
+        <div class="test-section loading" id="test2">
+            <h3>👤 Test 2: Patient Dashboard</h3>
+            <button onclick="testPatientDashboard()">Run Test</button>
+            <div class="status" id="status2">Ready to test</div>
+            <pre id="result2"></pre>
+        </div>
+        
+        <div class="test-section loading" id="test3">
+            <h3>👨‍⚕️ Test 3: Doctor Dashboard</h3>
+            <button onclick="testDoctorDashboard()">Run Test</button>
+            <div class="status" id="status3">Ready to test</div>
+            <pre id="result3"></pre>
+        </div>
+        
+        <div class="test-section loading" id="test4">
+            <h3>📅 Test 4: Calendar View</h3>
+            <button onclick="testCalendarView()">Run Test</button>
+            <div class="status" id="status4">Ready to test</div>
+            <pre id="result4"></pre>
+        </div>
+        
+        <div class="results">
+            <h3>📊 Test Summary</h3>
+            <button onclick="runAllTests()">🚀 Run All Tests</button>
+            <div id="summary"></div>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = window.location.origin;
+        let testResults = {};
+
+        // Helper functions
+        function setStatus(testId, status, className = 'loading') {
+            const element = document.getElementById(`test${testId}`);
+            const statusElement = document.getElementById(`status${testId}`);
+            element.className = `test-section ${className}`;
+            statusElement.textContent = status;
+        }
+
+        function setResult(testId, result) {
+            document.getElementById(`result${testId}`).textContent = JSON.stringify(result, null, 2);
+        }
+
+        // Test 1: Create Appointment
+        async function testCreateAppointment() {
+            setStatus(1, 'Testing appointment creation...', 'loading');
+            
+            const appointmentData = {
+                patientId: 'patient_9042222856',
+                doctorId: '1', // Dr. Prakash Das
+                doctorName: 'Dr. Prakash Das',
+                doctorSpecialization: 'Psychologist',
+                date: '2025-01-10',
+                time: '10:00 AM',
+                consultationFee: 500,
+                consultationType: 'in-person',
+                reason: 'Dynamic booking test'
+            };
+
+            try {
+                const response = await fetch(`${baseUrl}/api/appointments`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appointmentData)
+                });
+
+                const result = await response.json();
+                setResult(1, { status: response.status, ...result });
+
+                if (result.success) {
+                    setStatus(1, '✅ Appointment created successfully!', 'success');
+                    testResults.createAppointment = true;
+                } else {
+                    setStatus(1, '❌ Failed to create appointment', 'error');
+                    testResults.createAppointment = false;
+                }
+            } catch (error) {
+                setStatus(1, `💥 Error: ${error.message}`, 'error');
+                setResult(1, { error: error.message });
+                testResults.createAppointment = false;
+            }
+        }
+
+        // Test 2: Patient Dashboard
+        async function testPatientDashboard() {
+            setStatus(2, 'Testing patient dashboard...', 'loading');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/appointments?patientId=patient_9042222856`);
+                const result = await response.json();
+                setResult(2, result);
+
+                if (result.success && result.data && result.data.length > 0) {
+                    setStatus(2, `✅ Found ${result.data.length} appointments`, 'success');
+                    testResults.patientDashboard = true;
+                } else {
+                    setStatus(2, '❌ No appointments found', 'error');
+                    testResults.patientDashboard = false;
+                }
+            } catch (error) {
+                setStatus(2, `💥 Error: ${error.message}`, 'error');
+                setResult(2, { error: error.message });
+                testResults.patientDashboard = false;
+            }
+        }
+
+        // Test 3: Doctor Dashboard
+        async function testDoctorDashboard() {
+            setStatus(3, 'Testing doctor dashboard...', 'loading');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/appointments?doctorId=doctor_9876543210&userType=DOCTOR`);
+                const result = await response.json();
+                setResult(3, result);
+
+                if (result.success && result.data && result.data.length > 0) {
+                    setStatus(3, `✅ Found ${result.data.length} appointments`, 'success');
+                    testResults.doctorDashboard = true;
+                } else {
+                    setStatus(3, '❌ No appointments found', 'error');
+                    testResults.doctorDashboard = false;
+                }
+            } catch (error) {
+                setStatus(3, `💥 Error: ${error.message}`, 'error');
+                setResult(3, { error: error.message });
+                testResults.doctorDashboard = false;
+            }
+        }
+
+        // Test 4: Calendar View
+        async function testCalendarView() {
+            setStatus(4, 'Testing calendar appointments...', 'loading');
+            
+            try {
+                const response = await fetch(`${baseUrl}/api/doctor/appointments?doctorId=doctor_9876543210`);
+                const result = await response.json();
+                setResult(4, result);
+
+                if (result.success && result.data && result.data.length > 0) {
+                    setStatus(4, `✅ Calendar shows ${result.data.length} appointments`, 'success');
+                    testResults.calendarView = true;
+                } else {
+                    setStatus(4, '❌ Calendar has no appointments', 'error');
+                    testResults.calendarView = false;
+                }
+            } catch (error) {
+                setStatus(4, `💥 Error: ${error.message}`, 'error');
+                setResult(4, { error: error.message });
+                testResults.calendarView = false;
+            }
+        }
+
+        // Run all tests
+        async function runAllTests() {
+            document.getElementById('summary').innerHTML = 'Running tests...';
+            
+            await testCreateAppointment();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testPatientDashboard();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testDoctorDashboard();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+            await testCalendarView();
+            
+            // Show summary
+            const passed = Object.values(testResults).filter(Boolean).length;
+            const total = Object.keys(testResults).length;
+            const percentage = Math.round((passed / total) * 100);
+            
+            let summaryHtml = `<h4>Results: ${passed}/${total} tests passed (${percentage}%)</h4>`;
+            
+            Object.entries(testResults).forEach(([test, passed]) => {
+                const status = passed ? '✅' : '❌';
+                const name = test.replace(/([A-Z])/g, ' $1').toLowerCase();
+                summaryHtml += `<div>${status} ${name}</div>`;
+            });
+            
+            if (percentage === 100) {
+                summaryHtml += '<h3 style="color: green;">🎉 ALL TESTS PASSED! Dynamic booking is working!</h3>';
+            } else if (percentage >= 75) {
+                summaryHtml += '<h3 style="color: orange;">⚠️ Most tests passed, minor issues detected</h3>';
+            } else {
+                summaryHtml += '<h3 style="color: red;">🚨 Multiple test failures, system needs attention</h3>';
+            }
+            
+            document.getElementById('summary').innerHTML = summaryHtml;
+        }
+
+        // Set localStorage for testing
+        localStorage.setItem('userType', 'patient');
+        localStorage.setItem('userData', JSON.stringify({
+            id: 'patient_9042222856',
+            name: 'Test Patient',
+            phone: '9042222856',
+            email: 'test@patient.com'
+        }));
+    </script>
+</body>
+</html>
