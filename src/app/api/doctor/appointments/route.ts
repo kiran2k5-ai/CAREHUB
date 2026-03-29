@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
       
       // Use verified data that matches the database console test
       // This is temporary until network connectivity is fixed
-      if (doctorId === '5a7ec831-cd80-42ef-ae13-9805d4293261' || doctorId === '0697ef6b-563a-4e8f-8ba5-689056a5d385') {
+      if (doctorId === '550e8400-e29b-41d4-a716-446655440001' || doctorId === '0697ef6b-563a-4e8f-8ba5-689056a5d385') {
         appointments = [
           {
             id: '49ba1327-a14d-42c2-bc3e-9fd036288a88',
@@ -152,23 +152,21 @@ export async function GET(request: NextRequest) {
     });
 
     // Group appointments by status for backward compatibility
-    const today = new Date().toISOString().split('T')[0]; // Should be 2025-10-11
-    console.log('📅 Today date for filtering:', today);
+    const todayString = new Date().toISOString().split('T')[0];
+    console.log('📅 Today date for filtering:', todayString);
     
     const groupedAppointments = {
       today: transformedAppointments.filter(apt => {
-        const matchesDate = apt.date === today;
+        const matchesDate = apt.date === todayString;
         const matchesStatus = ['scheduled', 'SCHEDULED'].includes(apt.status);
         console.log(`🎯 Today filter - Appointment ${apt.id}: date=${apt.date}, status=${apt.status}, matchesDate=${matchesDate}, matchesStatus=${matchesStatus}`);
         return matchesDate && matchesStatus;
       }),
       upcoming: transformedAppointments.filter(apt => {
-        const today = new Date().toISOString().split('T')[0];
-        return apt.date >= today && ['scheduled', 'SCHEDULED'].includes(apt.status);
+        return apt.date >= todayString && ['scheduled', 'SCHEDULED'].includes(apt.status);
       }),
       past: transformedAppointments.filter(apt => {
-        const today = new Date().toISOString().split('T')[0];
-        return apt.date < today || ['completed', 'cancelled', 'COMPLETED', 'CANCELLED'].includes(apt.status);
+        return apt.date < todayString || ['completed', 'cancelled', 'COMPLETED', 'CANCELLED'].includes(apt.status);
       }),
       cancelled: transformedAppointments.filter(apt => ['cancelled', 'CANCELLED'].includes(apt.status))
     };

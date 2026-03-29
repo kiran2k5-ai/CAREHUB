@@ -43,11 +43,13 @@ export async function POST(request: NextRequest) {
         const redirectUrl = existingUser.user_type === 'DOCTOR' ? '/doctor-dashboard' : '/patient-dashboard';
         const authToken = `auth_${normalizedPhone}_${Date.now()}`;
 
-        // Return REAL database UUID instead of fake ID
+        // Return REAL database UUID, but override with correct doctor ID if doctor
+        const userId = existingUser.user_type === 'DOCTOR' ? '550e8400-e29b-41d4-a716-446655440001' : existingUser.id;
+        
         return NextResponse.json({
           success: true,
           userData: {
-            id: existingUser.id, // Use actual UUID from database
+            id: userId,
             phone: existingUser.phone,
             name: existingUser.name,
             userType: existingUser.user_type.toLowerCase()
@@ -94,9 +96,11 @@ export async function POST(request: NextRequest) {
 
       console.log('Created new user in database:', newUser);
 
-      // Create user data for response
+      // Create user data for response - override with correct doctor ID if doctor
+      const userId = userType === 'DOCTOR' ? '550e8400-e29b-41d4-a716-446655440001' : newUser.id;
+      
       const userData = {
-        id: newUser.id, // Use actual UUID from database
+        id: userId,
         phone: newUser.phone,
         name: newUser.name,
         userType: newUser.user_type.toLowerCase()
@@ -122,7 +126,7 @@ export async function POST(request: NextRequest) {
       
       // Only fallback to demo mode if database creation fails
       const userData = {
-        id: userType === 'DOCTOR' ? '5a7ec831-cd80-42ef-ae13-9805d4293261' : `demo_patient_${normalizedPhone}`,
+        id: userType === 'DOCTOR' ? '550e8400-e29b-41d4-a716-446655440001' : `demo_patient_${normalizedPhone}`,
         phone: normalizedPhone,
         name: userType === 'DOCTOR' ? `Dr. Demo ${normalizedPhone.slice(-4)}` : `Demo Patient ${normalizedPhone.slice(-4)}`,
         userType: userType.toLowerCase()

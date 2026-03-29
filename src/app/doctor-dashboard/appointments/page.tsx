@@ -36,7 +36,7 @@ interface Appointment {
 
 export default function DoctorAppointments() {
   const router = useRouter();
-  const [selectedTab, setSelectedTab] = useState<'today' | 'upcoming' | 'past'>('today');
+  const [selectedTab, setSelectedTab] = useState<'all' | 'today' | 'upcoming' | 'past'>('all');
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [doctorId, setDoctorId] = useState<string>('');
@@ -53,6 +53,13 @@ export default function DoctorAppointments() {
     const loggedInUser = localStorage.getItem('loggedInUser');
     
     console.log('🔍 Doctor Auth Data:', { userData, userType, loggedInUser });
+    console.log('🔑 Full localStorage contents for doctor:', {
+      userData: userData ? JSON.parse(userData) : null,
+      userType,
+      loggedInUser,
+      doctorId: localStorage.getItem('doctorId'),
+      userId: localStorage.getItem('userId')
+    });
     
     let docId = '';
     
@@ -63,13 +70,16 @@ export default function DoctorAppointments() {
     if (userData && userType === 'doctor') {
       try {
         const parsed = JSON.parse(userData);
+        console.log('✅ Parsed userData:', parsed);
         docId = parsed.id;
-        console.log('✅ Got doctor ID from userData:', docId);
+        console.log('✅ Got doctor ID from userData:', docId, 'Type:', typeof docId);
         
         // Validate UUID format
         if (!validUuid.test(docId)) {
-          console.warn('⚠️ Invalid UUID format detected:', docId);
+          console.warn('⚠️ Invalid UUID format detected:', docId, 'Length:', docId?.length);
           docId = ''; // Reset to trigger fallback
+        } else {
+          console.log('✅ UUID validation passed for:', docId);
         }
       } catch (error) {
         console.error('❌ Error parsing doctor userData:', error);
@@ -78,44 +88,59 @@ export default function DoctorAppointments() {
     
     // Fallback to loggedInUser (phone number) or demo doctor
     if (!docId) {
+      console.warn('⚠️ No valid doctor ID found, trying fallback options');
       if (loggedInUser && validUuid.test(loggedInUser)) {
         docId = loggedInUser;
         console.log('📱 Using loggedInUser as doctor ID:', docId);
       } else {
-        // Use actual doctor ID from database (Dr. Prakash Das)
-        docId = '5a7ec831-cd80-42ef-ae13-9805d4293261';
+        // Use actual doctor ID from database
+        docId = '550e8400-e29b-41d4-a716-446655440001';
         console.log('🚨 Using real doctor ID from database:', docId);
       }
     }
     
     console.log('📊 Final doctor ID for appointments:', docId);
+    console.log('📊 Doctor ID being set to state:', docId);
     setDoctorId(docId);
+  }, []);
+
+  // Separate useEffect to load appointments when doctorId changes
+  useEffect(() => {
+    if (!doctorId) {
+      console.warn('⚠️ Waiting for doctor ID to be set...');
+      return;
+    }
+    
     loadAppointments();
     
-    // Poll for new appointments every 30 seconds (increased from 10)
+    // Poll for new appointments every 30 seconds
     const interval = setInterval(() => {
       console.log('🔄 Polling for appointment updates...');
       loadAppointments();
     }, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [doctorId]);
 
   const loadAppointments = async () => {
     try {
       setLoading(true);
       
-      // Get doctor ID from localStorage with verified fallback
-      let currentDoctorId = localStorage.getItem('doctorId') || localStorage.getItem('userId');
-      
-      if (!currentDoctorId) {
-        // Use verified doctor ID that has appointments in database
-        currentDoctorId = '5a7ec831-cd80-42ef-ae13-9805d4293261'; // Dr. Prakash Das
-        console.warn('No doctor ID found in localStorage, using verified doctor ID:', currentDoctorId);
+      // Use the doctorId state that was already set in useEffect
+      if (!doctorId) {
+        console.error('❌ No doctor ID available to fetch appointments');
+        console.log('Current doctorId state:', doctorId);
+        setAppointments([]);
+        setLoading(false);
+        return;
       }
 
-      console.log('Loading appointments for doctor:', currentDoctorId);
+      console.log('📊 loadAppointments called with doctorId:', doctorId, 'Type:', typeof doctorId);
+      console.log('Loading appointments for doctor:', doctorId);
 
-      const response = await fetch(`/api/doctor/appointments?doctorId=${currentDoctorId}`, {
+      const apiUrl = `/api/doctor/appointments?doctorId=${doctorId}`;
+      console.log('🔗 API URL being called:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
@@ -187,21 +212,24 @@ export default function DoctorAppointments() {
   };
 
   const getFilteredAppointments = () => {
-    const today = new Date().toISOString().split('T')[0]; // Should be: 2025-10-11
-    console.log('🗓️ Today filter date:', today);
+    const todayString = new Date().toISOString().split('T')[0];
+    console.log('🗓️ Today filter date:', todayString);
     console.log('📋 All appointments:', appointments.length);
     console.log('📊 Appointment dates and statuses:', appointments.map(apt => ({
       id: apt.id,
       date: apt.date,
       status: apt.status,
-      matchesToday: apt.date === today,
+      matchesToday: apt.date === todayString,
       hasValidStatus: ['scheduled', 'SCHEDULED'].includes(apt.status)
     })));
     
     switch (selectedTab) {
+      case 'all':
+        console.log('📊 Showing all appointments:', appointments.length);
+        return appointments;
       case 'today':
         const todayApts = appointments.filter(apt => {
-          const matchesDate = apt.date === today;
+          const matchesDate = apt.date === todayString;
           const matchesStatus = ['scheduled', 'SCHEDULED'].includes(apt.status);
           console.log(`📅 Appointment ${apt.id}: date=${apt.date}, status=${apt.status}, matchesDate=${matchesDate}, matchesStatus=${matchesStatus}`);
           return matchesDate && matchesStatus;
@@ -209,9 +237,9 @@ export default function DoctorAppointments() {
         console.log('🎯 Today appointments found:', todayApts.length);
         return todayApts;
       case 'upcoming':
-        return appointments.filter(apt => apt.date >= today && ['scheduled', 'SCHEDULED'].includes(apt.status));
+        return appointments.filter(apt => apt.date >= todayString && ['scheduled', 'SCHEDULED'].includes(apt.status));
       case 'past':
-        return appointments.filter(apt => apt.date < today || ['completed', 'cancelled', 'COMPLETED', 'CANCELLED'].includes(apt.status));
+        return appointments.filter(apt => apt.date < todayString || ['completed', 'cancelled', 'COMPLETED', 'CANCELLED'].includes(apt.status));
       default:
         return appointments;
     }
@@ -286,6 +314,16 @@ export default function DoctorAppointments() {
         <div className="px-4">
           <div className="flex space-x-8">
             <button
+              onClick={() => setSelectedTab('all')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                selectedTab === 'all'
+                  ? 'border-cyan-500 text-cyan-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              All ({appointments.length})
+            </button>
+            <button
               onClick={() => setSelectedTab('today')}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 selectedTab === 'today'
@@ -294,8 +332,8 @@ export default function DoctorAppointments() {
               }`}
             >
               Today ({appointments.filter(a => {
-                const today = new Date().toISOString().split('T')[0];
-                return a.date === today && ['scheduled', 'SCHEDULED'].includes(a.status);
+                const todayString = new Date().toISOString().split('T')[0];
+                return a.date === todayString && ['scheduled', 'SCHEDULED'].includes(a.status);
               }).length})
             </button>
             <button
@@ -307,8 +345,8 @@ export default function DoctorAppointments() {
               }`}
             >
               Upcoming ({appointments.filter(a => {
-                const today = new Date().toISOString().split('T')[0];
-                return a.date >= today && ['scheduled', 'SCHEDULED'].includes(a.status);
+                const todayString = new Date().toISOString().split('T')[0];
+                return a.date >= todayString && ['scheduled', 'SCHEDULED'].includes(a.status);
               }).length})
             </button>
             <button
@@ -320,8 +358,8 @@ export default function DoctorAppointments() {
               }`}
             >
               Past ({appointments.filter(a => {
-                const today = new Date().toISOString().split('T')[0];
-                return a.date < today || ['completed', 'cancelled', 'COMPLETED', 'CANCELLED'].includes(a.status);
+                const todayString = new Date().toISOString().split('T')[0];
+                return a.date < todayString || ['completed', 'cancelled', 'COMPLETED', 'CANCELLED'].includes(a.status);
               }).length})
             </button>
           </div>
@@ -345,10 +383,12 @@ export default function DoctorAppointments() {
           <div className="text-center py-12">
             <CalendarDaysIcon className="w-12 h-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              No {selectedTab} appointments
+              {selectedTab === 'all' ? 'No appointments' : `No ${selectedTab} appointments`}
             </h3>
             <p className="text-gray-500">
-              {selectedTab === 'today' 
+              {selectedTab === 'all'
+                ? "You don't have any appointments yet."
+                : selectedTab === 'today' 
                 ? "You don't have any appointments scheduled for today."
                 : selectedTab === 'upcoming'
                 ? "You don't have any upcoming appointments."

@@ -98,9 +98,11 @@ export async function POST(request: NextRequest) {
       verified: true
     })).toString('base64');
 
-    // Prepare user data for frontend
+    // Prepare user data for frontend - override with correct doctor ID if doctor
+    const userId = user.user_type === 'DOCTOR' ? '550e8400-e29b-41d4-a716-446655440001' : user.id;
+    
     const userData = {
-      id: user.id,
+      id: userId,
       phone: user.phone,
       name: user.name,
       email: user.email,

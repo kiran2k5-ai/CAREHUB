@@ -342,6 +342,8 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     console.log('📝 Creating appointment in database:', body)
+    console.log('🔍 Date received in request:', body.date, '| Type:', typeof body.date)
+    console.log('🕐 Time received in request:', body.time, '| Type:', typeof body.time)
 
     const {
       patientId,
@@ -352,6 +354,11 @@ export async function POST(request: NextRequest) {
       consultationType,
       consultationFee
     } = body
+
+    // Validate date format
+    if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      console.warn('⚠️ Date format warning - Expected YYYY-MM-DD format, got:', date);
+    }
 
     // Validate required fields
     if (!patientId || !doctorId || !date || !time) {
@@ -483,6 +490,15 @@ export async function POST(request: NextRequest) {
       status: 'SCHEDULED' as 'SCHEDULED'
     };
 
+    console.log('✅ Appointment data ready to store:', {
+      id: appointmentData.id,
+      patient_id: appointmentData.patient_id,
+      doctor_id: appointmentData.doctor_id,
+      date: appointmentData.date,
+      time: appointmentData.time,
+      status: appointmentData.status
+    });
+
     const { data: appointment, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .insert([appointmentData])
@@ -498,6 +514,15 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('✅ Appointment created successfully in database:', appointment.id);
+    console.log('📅 Stored appointment date:', appointment.date);
+    console.log('📋 Stored appointment details:', {
+      id: appointment.id,
+      date: appointment.date,
+      time: appointment.time,
+      doctor_id: appointment.doctor_id,
+      patient_id: appointment.patient_id,
+      status: appointment.status
+    });
 
     // Format response
     const response = {

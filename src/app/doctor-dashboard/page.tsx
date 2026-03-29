@@ -79,7 +79,7 @@ export default function EnhancedDoctorDashboard() {
       // If doctorId is missing, not a valid UUID, or is a demo string, use the real UUID
       const validUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
       if (!doctorId || doctorId === 'undefined' || !validUuid.test(doctorId)) {
-        doctorId = '5a7ec831-cd80-42ef-ae13-9805d4293261'; // fallback to real doctor UUID
+        doctorId = '550e8400-e29b-41d4-a716-446655440001'; // fallback to real doctor UUID
       }
       const updatedDoctor = {
         ...doctor,
@@ -93,7 +93,7 @@ export default function EnhancedDoctorDashboard() {
       console.error('Error parsing doctor data:', error);
       // Fallback to real doctor UUID
       const demoDoctor = {
-        id: '5a7ec831-cd80-42ef-ae13-9805d4293261',
+        id: '550e8400-e29b-41d4-a716-446655440001',
         name: 'Dr. Demo',
         email: 'doctor@demo.com',
         phone: '9876543210',

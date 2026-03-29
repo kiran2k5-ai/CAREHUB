@@ -2,8 +2,20 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getTodayString, getLocalDateString, parseLocalDate, isPastDate } from '@/lib/dateUtils';
 
+type TimeSlotRecord = {
+  id: string;
+  date: string;
+  time: string;
+  is_available: boolean;
+  slot_type: string | null;
+  duration: number | null;
+  doctor_id?: string;
+  doctor_profile_id?: string;
+};
+
 // Helper function to generate time slots dynamically
 const generateTimeSlots = async (doctorId: string, date: string) => {
+  const allDays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   let doctor;
   try {
     // Get doctor from simplified database
@@ -21,7 +33,9 @@ const generateTimeSlots = async (doctorId: string, date: string) => {
     doctor = {
       id: doctorData.id,
       name: doctorData.name || 'Unknown Doctor',
-      workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], // Default
+      workingDays: Array.isArray(doctorData.working_days) && doctorData.working_days.length > 0
+        ? doctorData.working_days
+        : allDays,
       workingHours: doctorData.working_hours || '9:00 AM - 6:00 PM'
     };
   } catch (error) {
@@ -50,7 +64,7 @@ const generateTimeSlots = async (doctorId: string, date: string) => {
   // Get existing appointments for this doctor on this date from database
   let existingAppointments = [];
   try {
-    const { data: appointments, error } = await supabase
+    const { data: appointments, error } = await supabaseAdmin
       .from('appointments')
       .select('*')
       .eq('doctor_id', doctorId)
@@ -80,7 +94,7 @@ const generateTimeSlots = async (doctorId: string, date: string) => {
       const timeString = formatTime(hour, minute);
       
       // Check if this slot is already booked
-      const isBooked = existingAppointments.some(apt => apt.time === timeString);
+      const isBooked = existingAppointments.some(apt => normalizeTime(apt.time) === timeString);
       
       // Determine slot type
       let type: 'morning' | 'afternoon' | 'evening';
@@ -108,10 +122,198 @@ const generateTimeSlots = async (doctorId: string, date: string) => {
 
 // Helper function to format time
 const formatTime = (hour: number, minute: number): string => {
-  const period = hour >= 12 ? 'PM' : 'AM';
-  const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  const displayHour = hour.toString().padStart(2, '0');
   const displayMinute = minute.toString().padStart(2, '0');
-  return `${displayHour}:${displayMinute} ${period}`;
+  return `${displayHour}:${displayMinute}`;
+};
+
+const toUtcDayRange = (date: string) => {
+  const dayStart = new Date(`${date}T00:00:00.000Z`);
+  const nextDay = new Date(dayStart);
+  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+
+  return {
+    from: dayStart.toISOString(),
+    to: nextDay.toISOString()
+  };
+};
+
+const normalizeTime = (time: string | null | undefined): string => {
+  if (!time) return '';
+  const match = time.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return time.slice(0, 5);
+
+  const hour = match[1].padStart(2, '0');
+  const minute = match[2];
+  return `${hour}:${minute}`;
+};
+
+const normalizeSlotType = (slotType: string | null | undefined, time: string): 'morning' | 'afternoon' | 'evening' => {
+  const normalized = (slotType || '').toLowerCase();
+
+  if (normalized.includes('morning')) return 'morning';
+  if (normalized.includes('afternoon')) return 'afternoon';
+  if (normalized.includes('evening')) return 'evening';
+
+  const normalizedTime = normalizeTime(time);
+  const [hourStr] = normalizedTime.split(':');
+  const hour = Number(hourStr);
+
+  if (!Number.isFinite(hour)) return 'morning';
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+};
+
+const querySlotsByColumn = async (
+  doctorColumn: 'doctor_id' | 'doctor_profile_id',
+  doctorValue: string,
+  date: string
+) => {
+  const exactQuery = await supabaseAdmin
+    .from('time_slots')
+    .select('*')
+    .eq(doctorColumn, doctorValue)
+    .eq('date', date)
+    .order('time');
+
+  if (!exactQuery.error && exactQuery.data && exactQuery.data.length > 0) {
+    return exactQuery;
+  }
+
+  const datePrefixQuery = await supabaseAdmin
+    .from('time_slots')
+    .select('*')
+    .eq(doctorColumn, doctorValue)
+    .like('date', `${date}%`)
+    .order('time');
+
+  if (!datePrefixQuery.error && datePrefixQuery.data && datePrefixQuery.data.length > 0) {
+    return datePrefixQuery;
+  }
+
+  const { from, to } = toUtcDayRange(date);
+
+  const rangeQuery = await supabaseAdmin
+    .from('time_slots')
+    .select('*')
+    .eq(doctorColumn, doctorValue)
+    .gte('date', from)
+    .lt('date', to)
+    .order('time');
+
+  if (!rangeQuery.error && rangeQuery.data && rangeQuery.data.length > 0) {
+    return rangeQuery;
+  }
+
+  if (exactQuery.error && !datePrefixQuery.error) {
+    return datePrefixQuery;
+  }
+
+  if (datePrefixQuery.error && !rangeQuery.error) {
+    return rangeQuery;
+  }
+
+  if (exactQuery.error && !rangeQuery.error) {
+    return rangeQuery;
+  }
+
+  return exactQuery.error ? exactQuery : (datePrefixQuery.error ? rangeQuery : datePrefixQuery);
+};
+
+const resolveDoctorProfileIds = async (doctorId: string, doctorPhone?: string | null, doctorName?: string | null) => {
+  const profileIds = new Set<string>();
+
+  const byDirectId = await supabaseAdmin
+    .from('doctor_profiles')
+    .select('id')
+    .eq('id', doctorId)
+    .limit(1);
+
+  (byDirectId.data || []).forEach((row: { id: string }) => profileIds.add(row.id));
+
+  if (doctorPhone) {
+    const userByPhone = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('phone', doctorPhone)
+      .limit(1);
+
+    if (!userByPhone.error && userByPhone.data?.[0]?.id) {
+      const byUserId = await supabaseAdmin
+        .from('doctor_profiles')
+        .select('id')
+        .eq('user_id', userByPhone.data[0].id)
+        .limit(1);
+
+      (byUserId.data || []).forEach((row: { id: string }) => profileIds.add(row.id));
+    }
+  }
+
+  if (profileIds.size === 0 && doctorName) {
+    const userByName = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('name', doctorName)
+      .eq('user_type', 'DOCTOR')
+      .limit(1);
+
+    if (!userByName.error && userByName.data?.[0]?.id) {
+      const byUserId = await supabaseAdmin
+        .from('doctor_profiles')
+        .select('id')
+        .eq('user_id', userByName.data[0].id)
+        .limit(1);
+
+      (byUserId.data || []).forEach((row: { id: string }) => profileIds.add(row.id));
+    }
+  }
+
+  return Array.from(profileIds);
+};
+
+const fetchTimeSlotsWithFallback = async (doctorId: string, date: string, doctorPhone?: string | null, doctorName?: string | null) => {
+  const errors: unknown[] = [];
+
+  const directDoctorQuery = await querySlotsByColumn('doctor_id', doctorId, date);
+  if (directDoctorQuery.error) {
+    errors.push(directDoctorQuery.error);
+  }
+  if (!directDoctorQuery.error && directDoctorQuery.data && directDoctorQuery.data.length > 0) {
+    return { data: directDoctorQuery.data as TimeSlotRecord[], source: 'doctor_id' as const };
+  }
+
+  const profileIds = await resolveDoctorProfileIds(doctorId, doctorPhone, doctorName);
+
+  for (const profileId of profileIds) {
+    const profileQuery = await querySlotsByColumn('doctor_profile_id', profileId, date);
+    if (profileQuery.error) {
+      errors.push(profileQuery.error);
+      continue;
+    }
+
+    if (profileQuery.data && profileQuery.data.length > 0) {
+      return {
+        data: profileQuery.data as TimeSlotRecord[],
+        source: 'doctor_profile_id' as const,
+        profileId
+      };
+    }
+  }
+
+  if (!directDoctorQuery.error && directDoctorQuery.data && directDoctorQuery.data.length === 0) {
+    return {
+      data: [] as TimeSlotRecord[],
+      source: 'doctor_id' as const,
+      errors
+    };
+  }
+
+  return {
+    data: [] as TimeSlotRecord[],
+    source: 'none' as const,
+    errors
+  };
 };
 
 // GET /api/doctors/[id]/slots - Get available time slots for a doctor
@@ -148,7 +350,10 @@ export async function GET(
       doctor = {
         id: doctorData.id,
         name: doctorData.name || 'Unknown Doctor',
-        workingDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'], // Default
+        phone: doctorData.phone || null,
+        workingDays: Array.isArray(doctorData.working_days) && doctorData.working_days.length > 0
+          ? doctorData.working_days
+          : ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
         workingHours: doctorData.working_hours || '9:00 AM - 6:00 PM'
       };
     } catch (error) {
@@ -173,15 +378,10 @@ export async function GET(
     // Fetch time slots from database
     console.log('🔍 Fetching time slots from database for doctor:', doctorId, 'date:', date);
     
-    const { data: timeSlots, error: slotsError } = await supabaseAdmin
-      .from('time_slots')
-      .select('*')
-      .eq('doctor_id', doctorId)
-      .eq('date', date)
-      .order('time');
+    const slotQueryResult = await fetchTimeSlotsWithFallback(doctorId, date, doctor.phone, doctor.name);
 
-    if (slotsError) {
-      console.error('❌ Error fetching time slots:', slotsError);
+    if (slotQueryResult.source === 'none' && slotQueryResult.errors?.length) {
+      console.error('❌ Error fetching time slots:', slotQueryResult.errors[0]);
       return NextResponse.json({
         success: false,
         error: 'Database error',
@@ -189,28 +389,50 @@ export async function GET(
       }, { status: 500 });
     }
 
-    console.log(`✅ Found ${timeSlots?.length || 0} time slots in database`);
+    const timeSlots = slotQueryResult.data;
+
+    console.log(`✅ Found ${timeSlots?.length || 0} time slots in database`, {
+      source: slotQueryResult.source,
+      profileId: slotQueryResult.source === 'doctor_profile_id' ? slotQueryResult.profileId : undefined
+    });
 
     // Transform database slots to API format
     const formattedSlots = (timeSlots || []).map(slot => ({
       id: slot.id,
-      time: slot.time.substring(0, 5), // Convert "HH:MM:SS" to "HH:MM"
+      time: normalizeTime(slot.time),
       available: slot.is_available,
-      type: slot.slot_type,
+      type: normalizeSlotType(slot.slot_type, slot.time),
       date: slot.date,
-      doctorId: slot.doctor_id,
+      doctorId: slot.doctor_id || doctorId,
       duration: slot.duration || 30
     }));
 
+    let effectiveSlots = formattedSlots;
+
+    if (effectiveSlots.length === 0) {
+      console.log('⚠️ No DB slots found for doctor/date. Generating dynamic fallback slots.');
+      const generatedSlots = await generateTimeSlots(doctorId, date);
+
+      effectiveSlots = generatedSlots.map(slot => ({
+        id: slot.id,
+        time: normalizeTime(slot.time),
+        available: slot.available,
+        type: slot.type,
+        date: slot.date,
+        doctorId: slot.doctorId,
+        duration: 30
+      }));
+    }
+
     // Group slots by type
     const groupedSlots = {
-      morning: formattedSlots.filter(slot => slot.type === 'morning'),
-      afternoon: formattedSlots.filter(slot => slot.type === 'afternoon'),
-      evening: formattedSlots.filter(slot => slot.type === 'evening')
+      morning: effectiveSlots.filter(slot => slot.type === 'morning'),
+      afternoon: effectiveSlots.filter(slot => slot.type === 'afternoon'),
+      evening: effectiveSlots.filter(slot => slot.type === 'evening')
     };
 
-    const totalSlots = formattedSlots.length;
-    const availableSlots = formattedSlots.filter(slot => slot.available).length;
+    const totalSlots = effectiveSlots.length;
+    const availableSlots = effectiveSlots.filter(slot => slot.available).length;
 
     console.log('Generated slots for doctor', doctorId, 'on', date, ':', {
       totalSlots: totalSlots,

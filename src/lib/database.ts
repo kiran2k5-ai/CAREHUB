@@ -258,49 +258,112 @@ export class DatabaseService {
     console.log('🔍 DatabaseService: Looking for appointments for doctor:', doctorId);
     
     const client = this.getClient(); // Use admin client on server-side
-    
-    // Try direct query first (if doctor_id directly matches)
-    let { data, error } = await client
+
+    const candidateDoctorIds = new Set<string>([doctorId]);
+    const candidateUserIds = new Set<string>();
+    const candidateProfileIds = new Set<string>();
+
+    // Resolve doctor record (doctors.id) and related user id if present
+    const { data: doctorRecord } = await client
+      .from('doctors')
+      .select('id, user_id, phone, name')
+      .eq('id', doctorId)
+      .maybeSingle();
+
+    if (doctorRecord?.id) {
+      candidateDoctorIds.add(doctorRecord.id);
+    }
+
+    if (doctorRecord?.user_id) {
+      candidateUserIds.add(doctorRecord.user_id);
+      candidateDoctorIds.add(doctorRecord.user_id);
+    }
+
+    // If doctor id is actually a user id in some rows, resolve doctors.id values from it
+    const { data: doctorRowsByUserId } = await client
+      .from('doctors')
+      .select('id')
+      .eq('user_id', doctorId)
+      .limit(5);
+
+    (doctorRowsByUserId || []).forEach((row: { id: string }) => {
+      candidateDoctorIds.add(row.id);
+    });
+
+    // Resolve user via phone/name from doctors table for environments without doctors.user_id
+    if (doctorRecord?.phone) {
+      const { data: usersByPhone } = await client
+        .from('users')
+        .select('id')
+        .eq('phone', doctorRecord.phone)
+        .eq('user_type', 'DOCTOR')
+        .limit(5);
+
+      (usersByPhone || []).forEach((user: { id: string }) => {
+        candidateUserIds.add(user.id);
+        candidateDoctorIds.add(user.id);
+      });
+    }
+
+    if (candidateUserIds.size === 0 && doctorRecord?.name) {
+      const { data: usersByName } = await client
+        .from('users')
+        .select('id')
+        .eq('name', doctorRecord.name)
+        .eq('user_type', 'DOCTOR')
+        .limit(5);
+
+      (usersByName || []).forEach((user: { id: string }) => {
+        candidateUserIds.add(user.id);
+        candidateDoctorIds.add(user.id);
+      });
+    }
+
+    // Resolve doctor_profiles ids from both direct id and user ids
+    const { data: profileById } = await client
+      .from('doctor_profiles')
+      .select('id')
+      .eq('id', doctorId)
+      .limit(1);
+
+    (profileById || []).forEach((profile: { id: string }) => {
+      candidateProfileIds.add(profile.id);
+      candidateDoctorIds.add(profile.id);
+    });
+
+    if (candidateUserIds.size > 0) {
+      const { data: profilesByUserId } = await client
+        .from('doctor_profiles')
+        .select('id')
+        .in('user_id', Array.from(candidateUserIds));
+
+      (profilesByUserId || []).forEach((profile: { id: string }) => {
+        candidateProfileIds.add(profile.id);
+        candidateDoctorIds.add(profile.id);
+      });
+    }
+
+    console.log('🧭 DatabaseService: Candidate doctor identifiers:', {
+      requested: doctorId,
+      appointmentDoctorIds: Array.from(candidateDoctorIds),
+      userIds: Array.from(candidateUserIds),
+      profileIds: Array.from(candidateProfileIds)
+    });
+
+    const { data, error } = await client
       .from('appointments')
       .select(`
         *
       `)
-      .eq('doctor_id', doctorId)
+      .in('doctor_id', Array.from(candidateDoctorIds))
       .order('date', { ascending: false });
 
     if (error) {
-      console.error('❌ DatabaseService: Error fetching appointments directly:', error);
+      console.error('❌ DatabaseService: Error fetching appointments:', error);
       throw error;
     }
 
     console.log('📊 DatabaseService: Found', data?.length || 0, 'appointments');
-
-    // If no appointments found with direct doctor_id, try with doctor_profiles table
-    if (!data || data.length === 0) {
-      console.log('🔄 DatabaseService: Trying doctor_profiles lookup...');
-      
-      // Try getting doctor profile ID from user ID
-      const { data: doctorProfile } = await client
-        .from('doctor_profiles')
-        .select('id')
-        .eq('user_id', doctorId)
-        .single();
-
-      if (doctorProfile) {
-        const { data: profileAppointments, error: profileError } = await client
-          .from('appointments')
-          .select(`
-            *
-          `)
-          .eq('doctor_id', doctorProfile.id)
-          .order('date', { ascending: false });
-
-        if (!profileError && profileAppointments) {
-          data = profileAppointments;
-          console.log('📊 DatabaseService: Found', data.length, 'appointments via doctor_profiles');
-        }
-      }
-    }
 
     // Manually fetch patient details for each appointment
     if (data && data.length > 0) {

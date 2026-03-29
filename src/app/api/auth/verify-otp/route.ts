@@ -31,22 +31,25 @@ export async function POST(request: NextRequest) {
       }
       
       // For development: Create a temporary user for any 4-digit OTP
-      const user = {
+      const baseUser = {
         id: `temp-${Date.now()}`,
         email: contact.includes('@') ? contact : 'temp@example.com',
         phone: contact.includes('@') ? '+919999999999' : contact,
-        name: 'Test User'
+        name: 'Test User',
+        userType: contact.includes('doctor') || contact.includes('987654') ? 'doctor' : 'patient'
       };
+      // Override doctor ID with the correct one
+      const userId = baseUser.userType === 'doctor' ? '550e8400-e29b-41d4-a716-446655440001' : baseUser.id;
 
-      const token = `mock-jwt-token-${user.id}-${Date.now()}`;
+      const token = `mock-jwt-token-${userId}-${Date.now()}`;
 
       return NextResponse.json({
         message: 'OTP verified successfully (dev mode)',
         user: {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          phone: user.phone
+          id: userId,
+          name: baseUser.name,
+          email: baseUser.email,
+          phone: baseUser.phone
         },
         token
       });
@@ -69,20 +72,24 @@ export async function POST(request: NextRequest) {
         id: storedOtpData.userId,
         email: contact.includes('@') ? contact : 'temp@example.com',
         phone: contact.includes('@') ? '+919999999999' : contact,
-        name: 'Test User'
+        name: 'Test User',
+        userType: contact.includes('doctor') || contact.includes('987654') ? 'doctor' : 'patient'
       };
     }
 
     // Clear OTP after successful verification
     otpStorage.delete(contact);
 
+    // Override doctor ID with the correct one if it's a doctor
+    const userId = user.userType === 'doctor' || user.name?.includes('Doctor') ? '550e8400-e29b-41d4-a716-446655440001' : user.id;
+
     // In production, generate JWT token here
-    const token = `mock-jwt-token-${user.id}-${Date.now()}`;
+    const token = `mock-jwt-token-${userId}-${Date.now()}`;
 
     return NextResponse.json({
       message: 'OTP verified successfully',
       user: {
-        id: user.id,
+        id: userId,
         name: user.name,
         email: user.email,
         phone: user.phone

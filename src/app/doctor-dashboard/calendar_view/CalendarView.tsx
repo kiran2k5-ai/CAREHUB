@@ -56,13 +56,13 @@ export default function CalendarView() {
     const validUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
     if (!doctorId || doctorId === 'undefined' || !validUuid.test(doctorId)) {
       console.log('� Invalid or missing doctor ID, using fallback UUID');
-      doctorId = '5a7ec831-cd80-42ef-ae13-9805d4293261'; // Real doctor UUID with appointments
+      doctorId = '550e8400-e29b-41d4-a716-446655440001'; // Real doctor UUID with appointments
     }
 
     // Additional override for known problematic IDs
     if (doctorId === '0697ef6b-563a-4e8f-8ba5-689056a5d385' || doctorId.includes('demo_doctor_')) {
       console.log('🔄 Override: Switching to doctor ID with appointments');
-      doctorId = '5a7ec831-cd80-42ef-ae13-9805d4293261';
+      doctorId = '550e8400-e29b-41d4-a716-446655440001';
     }
 
     console.log('📊 Final doctor ID for calendar:', doctorId);
